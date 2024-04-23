@@ -22,6 +22,7 @@
 
 
 // Global Variables
+//std::string gameTitle;
 std::vector<std::string> sentence = {};
 int currentWord = 0;
 std::string typedWord;
@@ -219,6 +220,34 @@ int main() {
             std::size_t quoteEnd = readBuffer.find("\"", quoteStart);
 
             // Extract the quote
+
+            //// Extract the quote
+            std::cout << readBuffer << std::endl;
+            std::regex quote_regex("\"quote\":\"(.*?)\"");
+            std::regex title_regex("\"title\":\"(.*?)\"");
+            std::smatch match;
+
+            //std::cout << readBuffer << std::endl;
+            if (std::regex_search(readBuffer, match, quote_regex) && match.size() > 1) {
+                std::cout << match[1].str() << std::endl;
+            }
+            else {
+                std::cout << "No quote found!" << std::endl;
+                return -1;
+            }
+
+            if (std::regex_search(readBuffer, match, title_regex) && match.size() > 1) {
+                std::cout << match[1].str() << std::endl;
+            }
+            else {
+                std::cout << "Title not found..." << std::endl;
+            }
+
+
+
+
+
+
             std::string quote = readBuffer.substr(quoteStart, quoteEnd - quoteStart);
             sentence = ParseSentence(quote);
         }
@@ -227,7 +256,7 @@ int main() {
     }
 
     // Display logic
-    ClearConsole(true);
+    //ClearConsole(true);
 
     // Keyboard hooks and message processing
     HHOOK hhkLowLevelKybd = SetWindowsHookEx(WH_KEYBOARD_LL, MessageProc, 0, 0);
@@ -254,6 +283,11 @@ int main() {
         int wordsPerMinute = static_cast<int>(std::round(sentence.size() / (timeInSeconds / 60.0)));
         std::cout << "That corresponds to a WPM of " << wordsPerMinute << std::endl;
     }
+
+    //std::string quit_app;
+    //std::cout << "Enter [q] for quitting: " << std::flush << std::endl;
+    //std::getline(std::cin, quit_app);
+    //ClearLine();
 
     return 0;
 }
