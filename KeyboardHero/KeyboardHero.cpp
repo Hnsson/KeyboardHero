@@ -11,6 +11,23 @@
 
 #include "curl/curl.h"
 
+#define BLACK			0
+#define BLUE			1
+#define GREEN			2
+#define CYAN			3
+#define RED				4
+#define MAGENTA			5
+#define BROWN			6
+#define LIGHTGRAY		7
+#define DARKGRAY		8
+#define LIGHTBLUE		9
+#define LIGHTGREEN		10
+#define LIGHTCYAN		11
+#define LIGHTRED		12
+#define LIGHTMAGENTA	13
+#define YELLOW			14
+#define WHITE			15
+
 /* SOURCES */
 // Setup a windows hook:    https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-setwindowshookexa
 // Setup a callback:        https://learn.microsoft.com/en-us/windows/win32/winmsg/messageproc
@@ -18,11 +35,11 @@
 
 /* GOOD TO KNOW */
 // DWORD = unsigned long
-//std::regex quoteRegex(R"("quote":"([^"]*)")");
 
 
 // Global Variables
-//std::string gameTitle;
+std::string gameTitle;
+std::string characterName;
 std::vector<std::string> sentence = {};
 int currentWord = 0;
 std::string typedWord;
@@ -47,23 +64,31 @@ void ClearLine() {
     std::cout << "\r";       // Carriage return to move the cursor to the beginning of the line
 }
 
-void ClearConsole(bool currentWordCorrect) {
+void ClearConsole(bool currentWordCorrect, bool displayInfo = false) {
     system("cls");  // Clear console
     for (int i = 0; i < sentence.size(); ++i) {
         if (i < currentWord) {
-            SetColor(2);  // Green for words before the current word
+            SetColor(GREEN);  // Green for words before the current word
         }
         else if (i == currentWord) {
             // Set color based on whether the current word is correct
-            SetColor(currentWordCorrect ? 14 : 12);  // Yellow for correct, Red for incorrect
+            SetColor(currentWordCorrect ? YELLOW : RED);  // Yellow for correct, Red for incorrect
         }
         else {
-            SetColor(15);  // White for words after the current word
+            SetColor(WHITE);  // White for words after the current word
         }
         std::cout << sentence[i] << " ";
     }
     std::cout << std::endl;
-    SetColor(7);  // Reset to default color
+    SetColor(LIGHTGRAY);  // Reset to default color
+    if (displayInfo) {
+        if (!characterName.empty()) {
+            std::cout << "- " << characterName;
+        }
+        if (!gameTitle.empty()) {
+            std::cout << " : " << gameTitle << std::endl;
+        }
+    }
 }
 
 // Handling character translation
@@ -106,6 +131,7 @@ LRESULT CALLBACK MessageProc(int nCode, WPARAM wParam, LPARAM lParam) {
     if (nCode == HC_ACTION) {
         PKBDLLHOOKSTRUCT p = (PKBDLLHOOKSTRUCT)lParam;
         if (wParam == WM_KEYDOWN) {
+            std::cout << GetCharFromVKCode(p->vkCode, p->scanCode, false);
             if ((p->vkCode >= 'A' && p->vkCode <= 'Z') || (p->vkCode == 188 || p->vkCode == 190 || p->vkCode == 191)) { // 188 = [,] 190 = [.]
                 // Get current state of shift and caps
                 bool shift_pressed = (GetAsyncKeyState(VK_SHIFT) & 0x8000) != 0; // high bit set indicates key is currently down (pressed)
@@ -155,7 +181,7 @@ LRESULT CALLBACK MessageProc(int nCode, WPARAM wParam, LPARAM lParam) {
                     // Check if whole sentence is completed
                     if (currentWord == sentence.size()) {
                         std::cout << "Congratulations! You've typed the entire sentence correctly.\n";
-                        ClearConsole(true);
+                        ClearConsole(true, true);
 
                         lastSentencePressedTime = p->time;
                         firstWordStart = false;
@@ -197,7 +223,7 @@ static size_t WriteCallback(void* contents, size_t size, size_t nmemb, void* use
     return size * nmemb;
 }
 
-int main() {
+bool SetupQuoteWithCURL(std::vector<std::string>& out_sentence, std::string& out_gameTitle, std::string& out_characterName) {
     CURL* curl;
     CURLcode res;
     std::string readBuffer;
@@ -215,48 +241,44 @@ int main() {
             return -1;
         }
         else {
-            // Find the start and end of the quote
-            std::size_t quoteStart = readBuffer.find("\"quote\":\"") + 9; // 9 is the length of "\"quote\":\""
-            std::size_t quoteEnd = readBuffer.find("\"", quoteStart);
-
-            // Extract the quote
-
             //// Extract the quote
             std::cout << readBuffer << std::endl;
             std::regex quote_regex("\"quote\":\"(.*?)\"");
             std::regex title_regex("\"title\":\"(.*?)\"");
+            std::regex character_regex("\"character\":\"(.*?)\"");
             std::smatch match;
 
             //std::cout << readBuffer << std::endl;
             if (std::regex_search(readBuffer, match, quote_regex) && match.size() > 1) {
-                std::cout << match[1].str() << std::endl;
+                sentence = ParseSentence(match[1].str());
             }
             else {
                 std::cout << "No quote found!" << std::endl;
                 return -1;
             }
-
             if (std::regex_search(readBuffer, match, title_regex) && match.size() > 1) {
-                std::cout << match[1].str() << std::endl;
+                gameTitle = match[1].str();
             }
             else {
-                std::cout << "Title not found..." << std::endl;
+                gameTitle = "Title not found...";
             }
-
-
-
-
-
-
-            std::string quote = readBuffer.substr(quoteStart, quoteEnd - quoteStart);
-            sentence = ParseSentence(quote);
+            if (std::regex_search(readBuffer, match, character_regex) && match.size() > 1) {
+                characterName = match[1].str();
+            }
+            else {
+                characterName = "Title not found...";
+            }
         }
 
         curl_easy_cleanup(curl);
     }
+}
 
+int main() {
+    // Setup quote with CURL and Regex
+    SetupQuoteWithCURL(sentence, gameTitle, characterName);
     // Display logic
-    //ClearConsole(true);
+    ClearConsole(true);
 
     // Keyboard hooks and message processing
     HHOOK hhkLowLevelKybd = SetWindowsHookEx(WH_KEYBOARD_LL, MessageProc, 0, 0);
@@ -267,27 +289,25 @@ int main() {
     }
     UnhookWindowsHookEx(hhkLowLevelKybd);
     
+    SetColor(CYAN);
+    std::cout << std::endl << "Result: ";
+    SetColor(LIGHTGRAY);
     // Calculate and display timing and WPM result
     if (!timePerWord.empty()) {
         double sum = std::accumulate(timePerWord.begin(), timePerWord.end(), 0.0);
         int averageTimePerWord = static_cast<int>(std::round(sum / timePerWord.size()));
-        std::cout << std::endl << "This was your average time per word (ms): " << averageTimePerWord << " ms" << std::endl;
+        std::cout << std::endl << " - Your average time per word were " << averageTimePerWord << "ms";
     }
 
     double timeInSeconds = (lastSentencePressedTime - firstSentencePressedTime) / 1000.0;
     double timeInSecondsRounded = std::round(timeInSeconds * 10.0) / 10.0;  // Round to one decimal place
 
-    std::cout << std::endl << "The sentence took you " << std::fixed << std::setprecision(1) << timeInSecondsRounded << "s to complete!" << std::endl;
+    std::cout << std::endl << " - The sentence took you " << std::fixed << std::setprecision(1) << timeInSecondsRounded << "s to complete!" << std::endl;
 
     if (timeInSeconds > 0) {
         int wordsPerMinute = static_cast<int>(std::round(sentence.size() / (timeInSeconds / 60.0)));
-        std::cout << "That corresponds to a WPM of " << wordsPerMinute << std::endl;
+        std::cout << " - That corresponds to a WPM of " << wordsPerMinute << std::endl;
     }
-
-    //std::string quit_app;
-    //std::cout << "Enter [q] for quitting: " << std::flush << std::endl;
-    //std::getline(std::cin, quit_app);
-    //ClearLine();
 
     return 0;
 }
