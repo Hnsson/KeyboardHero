@@ -7,6 +7,7 @@
 #include <stdio.h>
 #include <cmath>
 #include <iomanip>
+#include <regex>
 
 #include "curl/curl.h"
 
@@ -17,6 +18,7 @@
 
 /* GOOD TO KNOW */
 // DWORD = unsigned long
+//std::regex quoteRegex(R"("quote":"([^"]*)")");
 
 
 // Global Variables
