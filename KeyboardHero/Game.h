@@ -55,7 +55,7 @@ private:
 	std::vector<int> wpm;
 	std::vector<int> tpw;
 
-	bool IsAlphanumericOrPunctuation(UINT vkCode);
+	bool IsAllowedKey(UINT vkCode);
 	void ProcessSpaceKey(PKBDLLHOOKSTRUCT p);
 	void HandleSpecialKeys(PKBDLLHOOKSTRUCT p);
 	void ProcessKeyPress(PKBDLLHOOKSTRUCT p);

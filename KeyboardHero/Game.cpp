@@ -15,7 +15,6 @@ Game::~Game()
 void Game::init()
 {
     workerThread = std::thread(ContinuousFetch, std::ref(keepRunning), std::ref(quoteQueue));
-    workerThread.detach();
     
     quoteQueue.wait_for_data();
     quoteQueue.try_pop(sentence);
@@ -36,11 +35,14 @@ void Game::update()
 
 void Game::shutdown()
 {
+    SetColor(DARKGRAY);
+    std::cout << "Waiting for thread to join..." << std::endl;
     keepRunning = false;
     if (workerThread.joinable()) {
         workerThread.join();
         std::cout << "Thread was joined!" << std::endl;
     }
+    SetColor(WHITE);
 }
 
 void Game::restart()
@@ -128,7 +130,7 @@ LRESULT Game::MessageProc(int nCode, WPARAM wParam, LPARAM lParam)
         PKBDLLHOOKSTRUCT p = (PKBDLLHOOKSTRUCT)lParam;
         if (wParam == WM_KEYDOWN) {
             instance->StartTimers(p->time);
-            if (instance->IsAlphanumericOrPunctuation(p->vkCode)) {
+            if (instance->IsAllowedKey(p->vkCode)) {
                 instance->ProcessKeyPress(p);
             }
             else {
@@ -139,7 +141,7 @@ LRESULT Game::MessageProc(int nCode, WPARAM wParam, LPARAM lParam)
     return CallNextHookEx(NULL, nCode, wParam, lParam);
 }
 
-bool Game::IsAlphanumericOrPunctuation(UINT vkCode)
+bool Game::IsAllowedKey(UINT vkCode)
 {
 	return (vkCode >= 'A' && vkCode <= 'Z') || (vkCode >= '0' && vkCode <= '9') ||
 		(vkCode == VK_OEM_COMMA || vkCode == VK_OEM_PERIOD || vkCode == VK_OEM_MINUS || vkCode == VK_OEM_PLUS || vkCode == VK_OEM_2);
