@@ -41,7 +41,7 @@ void Game::update()
             auto currentTime = std::chrono::steady_clock::now();
             auto elapsedTime = std::chrono::duration_cast<std::chrono::seconds>(currentTime - startTime);
 
-            if (elapsedTime.count() >= this->game_length_min) {
+            if (elapsedTime.count() >= this->game_length_sec) {
                 timeExpired = true;
             }
         }
@@ -129,7 +129,7 @@ void Game::result()
     }
     std::cout << "The total throughout the whole game WPM: ";
     SetColor(YELLOW);
-    std::cout << total_wpm << std::endl << std::endl;
+    std::cout << static_cast<int>(total_wpm) << std::endl << std::endl;
     SetColor(LIGHTGRAY);
 
     if (tpw.size() > 0) {
@@ -160,8 +160,11 @@ void Game::result()
         std::cout << "Progress not saved." << std::endl;
     }
     SetColor(LIGHTMAGENTA);
-    std::cout << std::endl << "Thanks for playing!" << std::endl << std::endl;
+    std::cout << std::endl << "Thanks for playing!" << std::endl;
     SetColor(LIGHTGRAY);
+
+    std::cout << "Press any button to close the game: " << std::endl << std::endl;;
+    int ch = _getch();
 }
 
 bool Game::menu()
@@ -308,7 +311,7 @@ void Game::SaveProgress(std::string folder_path, double total_wpm)
         outFile << "You did not complete any sessions, a per basis session WPM could not be calculated...\n";
     }
 
-    outFile << "The total throughout the whole game WPM: " << total_wpm << "\n\n";
+    outFile << "The total throughout the whole game WPM: " << static_cast<int>(total_wpm) << "\n\n";
 
     if (!tpw.empty()) {
         outFile << "These are your Time Per Words (TPW) for each round:\n";

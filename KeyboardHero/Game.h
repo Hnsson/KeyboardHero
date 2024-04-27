@@ -56,7 +56,7 @@ private:
 	bool needRedraw = true;
 
 	// Timers
-	double game_length_min = 10;
+	double game_length_sec = 60;
 
 	std::chrono::steady_clock::time_point startTime;
 	bool timerStarted = false;  // New flag to check if timer has started

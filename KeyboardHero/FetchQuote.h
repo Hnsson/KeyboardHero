@@ -7,6 +7,9 @@
 #include "regex"
 
 #include "curl/curl.h"
+#include "nlohmann/json.hpp"
+
+using json = nlohmann::json;
 
 inline static size_t WriteCallback(void* contents, size_t size, size_t nmemb, void* userp) {
     ((std::string*)userp)->append((char*)contents, size * nmemb);
@@ -32,31 +35,17 @@ inline bool SetupQuoteWithCURL(std::vector<std::string>& out_sentence, std::stri
             return false;
         }
         else {
-            //// Extract the quote
-            std::regex quote_regex("\"quote\":\"(.*?)\"");
-            std::regex title_regex("\"title\":\"(.*?)\"");
-            std::regex character_regex("\"character\":\"(.*?)\"");
-            std::smatch match;
+            try {
+                auto j = json::parse(readBuffer);
 
-            //std::cout << readBuffer << std::endl;
-            if (std::regex_search(readBuffer, match, quote_regex) && match.size() > 1) {
-                out_sentence = ParseSentence(match[1].str());
+                // Extract data using JSON
+                out_sentence = ParseSentence(j.value("quote", "Quote not found...")); // assuming "quote" is a JSON array of strings
+                out_gameTitle = j.value("title", "Title not found...");  // Use default if "title" is not present
+                out_characterName = j.value("character", "Character not found...");  // Use default if "character" is not present
             }
-            else {
-                std::cout << "No quote found!" << std::endl;
+            catch (json::exception& e) {
+                std::cerr << "JSON parsing error: " << e.what() << '\n';
                 return false;
-            }
-            if (std::regex_search(readBuffer, match, title_regex) && match.size() > 1) {
-                out_gameTitle = match[1].str();
-            }
-            else {
-                out_gameTitle = "Title not found...";
-            }
-            if (std::regex_search(readBuffer, match, character_regex) && match.size() > 1) {
-                out_characterName = match[1].str();
-            }
-            else {
-                out_characterName = "Title not found...";
             }
         }
 
