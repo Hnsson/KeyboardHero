@@ -12,12 +12,12 @@ Game::~Game()
 void Game::init()
 {
     workerThread = std::thread(&Game::t_ContinuousFetch, this, std::ref(keepRunning), std::ref(quoteQueue));
-    
+
     quoteQueue.wait_for_data();
     quoteQueue.try_pop(sentence);
 
     if (!menu()) return;
-    ClearConsole(std::get<0>(sentence), currentWord, true, this->current_score_multiplier, this->total_score);
+    ClearConsole();
     update();
 }
 
@@ -39,7 +39,7 @@ void Game::update()
 
         if (timerStarted) {
             auto currentTime = std::chrono::steady_clock::now();
-            auto elapsedTime = std::chrono::duration_cast<std::chrono::minutes>(currentTime - startTime);
+            auto elapsedTime = std::chrono::duration_cast<std::chrono::seconds>(currentTime - startTime);
 
             if (elapsedTime.count() >= this->game_length_min) {
                 timeExpired = true;
@@ -99,47 +99,82 @@ void Game::restart()
     firstKeyPressedTime = 0;
     lastKeyPressedTime = 0;
     //
-
     // Clear console and show new game
-    ClearConsole(std::get<0>(sentence), currentWord, true, this->current_score_multiplier, this->total_score);
+    ClearConsole();
 }
 
 void Game::result()
 {
+    auto currentTime = std::chrono::steady_clock::now();
+    double secondPassed = std::chrono::duration_cast<std::chrono::seconds>(currentTime - startTime).count();
+    double total_wpm = (total_word_hit / secondPassed) * 60;
+
     SetColor(CYAN);
-    std::cout << std::endl << std::endl << "Result for this session:" << std::endl;
+    ClearLine();
+    std::cout << "Result for this session:" << std::endl;
     SetColor(LIGHTGRAY);
 
-    std::cout << "These are the Words Per Minute (WPM) for each round:" << std::endl;
-    for (int i = 0; i < wpm.size(); i++) {
-        std::cout << "(" << i << ")" << "\t" << wpm[i] << std::endl;
+    if (wpm.size() > 0) {
+        std::cout << "These are the Words Per Minute (WPM) for each round:" << std::endl;
+        for (int i = 0; i < wpm.size(); i++) {
+            std::cout << "(" << (i + 1) << ")" << "\t" << wpm[i] << std::endl;
+        }
+        std::cout << "The average for all sessions WPM: ";
+        SetColor(YELLOW);
+        std::cout << calculateAverage(wpm) << std::endl;
+        SetColor(LIGHTGRAY);
     }
-    std::cout << "The average WPM: ";
+    else {
+        std::cout << "You did not complete any sessions, a per basis session WPM could not be calculated..." << std::endl;
+    }
+    std::cout << "The total throughout the whole game WPM: ";
     SetColor(YELLOW);
-    std::cout << calculateAverage(wpm) << std::endl << std::endl;
+    std::cout << total_wpm << std::endl << std::endl;
     SetColor(LIGHTGRAY);
 
-    std::cout << "These are the your Time Per Words (TPW) for each round:" << std::endl;
-    for (int i = 0; i < tpw.size(); i++) {
-        std::cout << "(" << i << ")" << "\t" << tpw[i] << std::endl;
+    if (tpw.size() > 0) {
+        std::cout << "These are the your Time Per Words (TPW) for each round:" << std::endl;
+        for (int i = 0; i < tpw.size(); i++) {
+            std::cout << "(" << (i + 1) << ")" << "\t" << tpw[i] << std::endl;
+        }
+        std::cout << "The average TPW: ";
+        SetColor(YELLOW);
+        std::cout << calculateAverage(tpw) << std::endl << std::endl;
+        SetColor(LIGHTGRAY);
     }
-    std::cout << "The average TPW: ";
-    SetColor(YELLOW);
-    std::cout << calculateAverage(tpw) << std::endl << std::endl;
+    else {
+        std::cout << "You did not complete any sessions, a per basis session TPW could not be calculated..." << std::endl;
+    }
+
+    // Ask user if they want to save the progress
+    std::cout << "Do you want to save your progress? (yes/no): ";
+    FlushConsoleInputBuffer(GetStdHandle(STD_INPUT_HANDLE)); // Needed this input buffer flush to remove previous inputs
+    std::string response;
+    getline(std::cin, response);  // Use getline to read the whole line
+
+    if (response == "yes") {
+        // Implement the save function here
+        SaveProgress("runs/", total_wpm);
+    }
+    else {
+        std::cout << "Progress not saved." << std::endl;
+    }
+    SetColor(LIGHTMAGENTA);
+    std::cout << std::endl << "Thanks for playing!" << std::endl << std::endl;
     SetColor(LIGHTGRAY);
 }
 
 bool Game::menu()
 {
-    SetColor(CYAN);  // Set a pleasant color for the title
+    SetColor(CYAN);
     std::cout << "================ Keyboard Hero ================\n" << std::endl;
-    SetColor(WHITE);  // Default color for the instructions
+    SetColor(WHITE);
 
     std::cout << "Welcome to Keyboard Hero!\n\n"
         << "Instructions:\n"
         << "1. A series of video game quotes will appear on the screen.\n"
         << "2. Type them correctly to gain points. And plenty correct in a sequence earns you a score multiplier!\n"
-        << "3. Your results will be displayed at the end of each game session.\n"
+        << "3. Your results will be displayed at the end of each game session and can be saved.\n"
         << "4. You can exit the game anytime by pressing the ESC button.\n\n"
         << "Press any key to start the game...\n" << std::endl;
 
@@ -184,10 +219,119 @@ LRESULT Game::MessageProc(int nCode, WPARAM wParam, LPARAM lParam)
     return CallNextHookEx(NULL, nCode, wParam, lParam);
 }
 
+
+void Game::ClearConsole()
+{
+    system("cls");  // Clear console
+
+    for (int i = 0; i < std::get<0>(sentence).size(); ++i) {
+        if (i < currentWord) {
+            SetColor(GREEN);
+        }
+        else if (i == currentWord) {
+            SetColor(currentWordCorrect ? YELLOW : RED);
+        }
+        else {
+            SetColor(WHITE);
+        }
+        std::cout << std::get<0>(sentence)[i] << " ";
+    }
+    DisplayScoreInfo();
+}
+
+void Game::DisplayScoreInfo()
+{
+    std::cout << std::endl << std::endl;
+    SetColor(LIGHTGRAY);
+    std::cout << "Current multiplier: ";
+    SetColor(YELLOW);
+    std::cout << (current_score_multiplier + 1) << std::endl;
+    SetColor(LIGHTGRAY);
+    std::cout << "Current score: ";
+    SetColor(YELLOW);
+    std::cout << static_cast<int>(total_score) << std::endl;
+    std::cout << std::endl;
+    SetColor(LIGHTGRAY);
+}
+
+void Game::DisplayCurrentTyping()
+{
+    ClearLine(); // Clear current line to keep the sentence not flicker
+    std::cout << typedWord;
+}
+
+void Game::SaveProgress(std::string folder_path, double total_wpm)
+{
+    // Get current time using the system_clock
+    auto now = std::chrono::system_clock::now();
+    auto in_time_t = std::chrono::system_clock::to_time_t(now);
+
+    // Convert time_t to tm struct for UTC or local time
+    std::tm bt;
+    localtime_s(&bt, &in_time_t); // Use localtime_s which is safer
+
+    // Create a stringstream to hold the filename
+    std::stringstream ss;
+    ss << std::put_time(&bt, "game_results_%Y-%m-%d_%H-%M-%S.txt"); // Format: game_results_YYYY-MM-DD_HH-MM-SS.txt
+    std::string filename = ss.str();
+
+    // Check if the directory exists and create it if it does not
+    std::filesystem::path dir_path(folder_path);
+    if (!std::filesystem::exists(dir_path)) {
+        std::filesystem::create_directories(dir_path);
+    }
+
+    // Combine directory and filename
+    std::filesystem::path file_path = dir_path / filename;
+
+    // Open a file with the generated filename
+    std::ofstream outFile(file_path);
+
+    if (!outFile) {
+        std::cerr << "Failed to open the file for writing." << std::endl;
+        return;
+    }
+
+    // Write the session results to the file
+    outFile << "Result for this session:\n\n";
+
+    outFile << "Your total score was: " << total_score << "\n\n";
+
+    if (!wpm.empty()) {
+        outFile << "These are the Words Per Minute (WPM) for each round:\n";
+        for (size_t i = 0; i < wpm.size(); i++) {
+            outFile << "(" << (i + 1) << ")\t" << wpm[i] << "\n";
+        }
+        outFile << "The average for all sessions WPM: " << calculateAverage(wpm) << "\n\n";
+    }
+    else {
+        outFile << "You did not complete any sessions, a per basis session WPM could not be calculated...\n";
+    }
+
+    outFile << "The total throughout the whole game WPM: " << total_wpm << "\n\n";
+
+    if (!tpw.empty()) {
+        outFile << "These are your Time Per Words (TPW) for each round:\n";
+        for (size_t i = 0; i < tpw.size(); i++) {
+            outFile << "(" << (i + 1) << ")\t" << tpw[i] << "\n";
+        }
+        outFile << "The average TPW: " << calculateAverage(tpw) << "\n\n";
+    }
+    else {
+        outFile << "You did not complete any sessions, a per basis session TPW could not be calculated...\n";
+    }
+
+    outFile.close();  // Close the file
+    std::cout << "Your progression was saved at: ";
+    SetColor(YELLOW);
+    std::cout << file_path << std::endl;
+    SetColor(LIGHTGRAY);
+}
+
 bool Game::IsAllowedKey(UINT vkCode)
 {
-	return (vkCode >= 'A' && vkCode <= 'Z') || (vkCode >= '0' && vkCode <= '9') ||
-		(vkCode == VK_OEM_COMMA || vkCode == VK_OEM_PERIOD || vkCode == VK_OEM_MINUS || vkCode == VK_OEM_PLUS || vkCode == VK_OEM_2);
+    return (vkCode >= 'A' && vkCode <= 'Z') || (vkCode >= '0' && vkCode <= '9') ||
+        (vkCode == VK_OEM_COMMA || vkCode == VK_OEM_PERIOD || vkCode == VK_OEM_MINUS || vkCode == VK_OEM_PLUS || vkCode == VK_OEM_2);
 }
 
 void Game::ProcessKeyPress(PKBDLLHOOKSTRUCT p)
@@ -199,10 +343,9 @@ void Game::ProcessKeyPress(PKBDLLHOOKSTRUCT p)
 
     // Convert to lower if needed
     char keyCode = GetCharFromVKCode(p->vkCode, p->scanCode, lowerCase);
-
-    ClearLine(); // Clear current line to keep the sentence not flicker
     typedWord += keyCode;
-    std::cout << typedWord;
+
+    DisplayCurrentTyping();
 }
 
 void Game::HandleSpecialKeys(PKBDLLHOOKSTRUCT p)
@@ -211,8 +354,7 @@ void Game::HandleSpecialKeys(PKBDLLHOOKSTRUCT p)
     case VK_BACK:
         if (!typedWord.empty()) {
             typedWord.pop_back();
-            ClearLine();
-            std::cout << typedWord;
+            DisplayCurrentTyping();
         }
         break;
     case VK_SPACE:
@@ -233,27 +375,31 @@ void Game::ProcessSpaceKey(PKBDLLHOOKSTRUCT p)
     }
     if (typedWord == std::get<0>(sentence)[currentWord]) {
         // Forward pointer to next word in sentence
+        currentWordCorrect = true;
         currentWord++;
         this->current_word_hit++;
+        this->total_word_hit++;
 
         if (currentWord == std::get<0>(sentence).size()) { // sentence is completed queue next quote!
             lastSentencePressedTime = p->time;
             firstWordStart = false;
-        
+
             restart();
             cv.notify_all(); // "Wake" threads up to check if the queue can be filled with quotes again
             return;
         }
         typedWord.clear();
         this->total_score += calculateScore(this->base_score, (lastKeyPressedTime - firstKeyPressedTime));
-        ClearConsole(std::get<0>(sentence), currentWord, true, this->current_score_multiplier, this->total_score);
+
+        ClearConsole();
     }
     else {
+        currentWordCorrect = false;
         this->current_word_hit = 0;
         this->current_score_multiplier = 0;
 
-        ClearConsole(std::get<0>(sentence), currentWord, false, this->current_score_multiplier, this->total_score);
-        std::cout << typedWord;
+        ClearConsole();
+        DisplayCurrentTyping();
     }
 }
 
@@ -302,25 +448,25 @@ double Game::calculateScore(double base_score, DWORD time_in_ms)
 
     if (time_in_sec == 0) return 0;
 
-    return (base_score / time_in_sec)*(calculateScoreMultiplier() + 1);
+    return (base_score / time_in_sec) * (calculateScoreMultiplier() + 1);
 }
 
 int Game::calculateScoreMultiplier()
 {
     switch (current_word_hit) {
-        case 8:
-            this->current_score_multiplier = 1;
+    case 8:
+        this->current_score_multiplier = 1;
         break;
-        case 12:
-            this->current_score_multiplier = 2;
+    case 12:
+        this->current_score_multiplier = 2;
         break;
-        case 16:
-            this->current_score_multiplier = 3;
+    case 16:
+        this->current_score_multiplier = 3;
         break;
-        case 20:
-            this->current_score_multiplier = 4;
+    case 20:
+        this->current_score_multiplier = 4;
         break;
-        default:
+    default:
         break;
     }
 

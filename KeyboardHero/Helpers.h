@@ -50,72 +50,9 @@ inline void ClearLine() {
     std::cout << "\r";       // Carriage return to move the cursor to the beginning of the line
 }
 
-inline void ClearConsole(std::vector<std::string> sentence, int currentWord, bool currentWordCorrect, int multiplier, int total_score) {
-    system("cls");  // Clear console
-    for (int i = 0; i < sentence.size(); ++i) {
-        if (i < currentWord) {
-            SetColor(GREEN);  // Green for words before the current word
-        }
-        else if (i == currentWord) {
-            // Set color based on whether the current word is correct
-            SetColor(currentWordCorrect ? YELLOW : RED);  // Yellow for correct, Red for incorrect
-        }
-        else {
-            SetColor(WHITE);  // White for words after the current word
-        }
-        std::cout << sentence[i] << " ";
-    }
-    std::cout << std::endl << std::endl;
-    SetColor(LIGHTGRAY);  // Reset to default color
-    std::cout << "Current multiplier: ";
-    SetColor(YELLOW);
-    std::cout << (multiplier + 1) << std::endl;
-    SetColor(LIGHTGRAY);
-    std::cout << "Current score: ";
-    SetColor(YELLOW);
-    std::cout << static_cast<int>(total_score) << std::endl;
-    std::cout << std::endl;
-    SetColor(LIGHTGRAY);
-}
-
 inline void Loading() {
     system("cls");
     std::cout << "Loading...";
-}
-
-inline void ResultScreen(std::vector<std::string> sentence, std::string characterName, std::string gameTitle, DWORD firstSentencePressedTime, DWORD lastSentencePressedTime, std::vector<DWORD>& timePerWord) {
-    system("cls");
-    for (int i = 0; i < sentence.size(); ++i) {
-        SetColor(GREEN);  // Green for words before the current word
-        std::cout << sentence[i] << " ";
-    }
-    SetColor(CYAN);
-    std::cout << "Result:" << std::endl;
-    SetColor(LIGHTGRAY);
-    if (!characterName.empty()) {
-        std::cout << "- " << characterName;
-    }
-    if (!gameTitle.empty()) {
-        std::cout << " : " << gameTitle << std::endl;
-    }
-
-
-    if (!timePerWord.empty()) {
-        double sum = std::accumulate(timePerWord.begin(), timePerWord.end(), 0.0);
-        int averageTimePerWord = static_cast<int>(std::round(sum / timePerWord.size()));
-        std::cout << std::endl << " - Your average time per word were " << averageTimePerWord << "ms";
-    }
-
-    double timeInSeconds = (lastSentencePressedTime - firstSentencePressedTime) / 1000.0;
-    double timeInSecondsRounded = std::round(timeInSeconds * 10.0) / 10.0;  // Round to one decimal place
-
-    std::cout << std::endl << " - The sentence took you " << std::fixed << std::setprecision(1) << timeInSecondsRounded << "s to complete!" << std::endl;
-
-    if (timeInSeconds > 0) {
-        int wordsPerMinute = static_cast<int>(std::round(sentence.size() / (timeInSeconds / 60.0)));
-        std::cout << " - That corresponds to a WPM of " << wordsPerMinute << std::endl;
-    }
-
 }
 
 inline std::vector<std::string> ParseSentence(std::string str) {

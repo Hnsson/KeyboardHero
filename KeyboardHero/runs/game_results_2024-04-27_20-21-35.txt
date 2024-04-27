@@ -1,0 +1,16 @@
+Result for this session:
+
+Your total score was: 327.236
+
+These are the Words Per Minute (WPM) for each round:
+(1)	120
+(2)	66
+The average for all sessions WPM: 93
+
+The total throughout the whole game WPM: 90
+
+These are your Time Per Words (TPW) for each round:
+(1)	403
+(2)	512
+The average TPW: 457.5
+

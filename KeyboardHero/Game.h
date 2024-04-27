@@ -2,9 +2,12 @@
 
 #include <iostream>
 #include <windows.h>
+#include <cstdio>
 #include <vector>
 #include <sstream>
 #include <conio.h>
+#include <fstream>
+#include <filesystem>
 
 #include <numeric>
 #include <stdio.h>
@@ -49,8 +52,11 @@ private:
 	int currentWord = 0;
 	std::string typedWord;
 
+	bool currentWordCorrect = true;
+	bool needRedraw = true;
+
 	// Timers
-	int game_length_min = 1;
+	double game_length_min = 10;
 
 	std::chrono::steady_clock::time_point startTime;
 	bool timerStarted = false;  // New flag to check if timer has started
@@ -70,11 +76,17 @@ private:
 	double total_score = 0;
 
 	int current_word_hit = 0;
+	int total_word_hit = 0;
 
 	std::vector<int> wpm;
 	std::vector<int> tpw;
 
 	// Game specific helper functions
+	void ClearConsole();
+	void DisplayScoreInfo();
+	void DisplayCurrentTyping();
+	void SaveProgress(std::string folder_path, double total_wpm);
+
 	bool IsAllowedKey(UINT vkCode);
 	void ProcessSpaceKey(PKBDLLHOOKSTRUCT p);
 	void HandleSpecialKeys(PKBDLLHOOKSTRUCT p);
