@@ -29,7 +29,7 @@ inline bool SetupQuoteWithCURL(std::vector<std::string>& out_sentence, std::stri
         res = curl_easy_perform(curl);
         if (res != CURLE_OK) {
             std::cerr << "curl_easy_perform() failed: " << curl_easy_strerror(res) << std::endl;
-            return -1;
+            return false;
         }
         else {
             //// Extract the quote
@@ -44,7 +44,7 @@ inline bool SetupQuoteWithCURL(std::vector<std::string>& out_sentence, std::stri
             }
             else {
                 std::cout << "No quote found!" << std::endl;
-                return -1;
+                return false;
             }
             if (std::regex_search(readBuffer, match, title_regex) && match.size() > 1) {
                 out_gameTitle = match[1].str();
@@ -61,21 +61,5 @@ inline bool SetupQuoteWithCURL(std::vector<std::string>& out_sentence, std::stri
         }
 
         curl_easy_cleanup(curl);
-    }
-}
-
-inline void ContinuousFetch(std::atomic<bool>& running, ThreadSafeQueue<std::tuple<std::vector<std::string>, std::string, std::string>>& queue) {
-    while (running) {
-        if (queue.size() > 10) {
-            std::this_thread::sleep_for(std::chrono::seconds(30));  // Slow down fetching if the queue is full
-        }
-        else {
-            std::vector<std::string> out_sentence;
-            std::string out_gameTitle, out_characterName;
-            if (SetupQuoteWithCURL(out_sentence, out_gameTitle, out_characterName)) {
-                queue.push(std::make_tuple(out_sentence, out_gameTitle, out_characterName));
-            }
-            std::this_thread::sleep_for(std::chrono::seconds(5));  // Regular interval
-        }
     }
 }

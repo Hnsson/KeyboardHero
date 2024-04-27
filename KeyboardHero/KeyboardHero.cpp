@@ -359,9 +359,7 @@ int main() {
 
 	// Singleton instance of game
 	Game& game = Game::getInstance();
-
-	game.update();
-
+	game.init();
 	Game::releaseInstance();
 	return 0;
 }

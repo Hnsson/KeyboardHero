@@ -50,7 +50,7 @@ inline void ClearLine() {
     std::cout << "\r";       // Carriage return to move the cursor to the beginning of the line
 }
 
-inline void ClearConsole(std::vector<std::string> sentence, int currentWord, bool currentWordCorrect) {
+inline void ClearConsole(std::vector<std::string> sentence, int currentWord, bool currentWordCorrect, int multiplier, int total_score) {
     system("cls");  // Clear console
     for (int i = 0; i < sentence.size(); ++i) {
         if (i < currentWord) {
@@ -65,8 +65,17 @@ inline void ClearConsole(std::vector<std::string> sentence, int currentWord, boo
         }
         std::cout << sentence[i] << " ";
     }
-    std::cout << std::endl;
+    std::cout << std::endl << std::endl;
     SetColor(LIGHTGRAY);  // Reset to default color
+    std::cout << "Current multiplier: ";
+    SetColor(YELLOW);
+    std::cout << (multiplier + 1) << std::endl;
+    SetColor(LIGHTGRAY);
+    std::cout << "Current score: ";
+    SetColor(YELLOW);
+    std::cout << static_cast<int>(total_score) << std::endl;
+    std::cout << std::endl;
+    SetColor(LIGHTGRAY);
 }
 
 inline void Loading() {
